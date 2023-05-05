@@ -9,6 +9,9 @@ app = FastAPI()
 hostname = os.environ.get('ELASTIC_HOSTNAME')
 user = os.environ.get("ELASTIC_USERNAME")
 password = os.environ.get("ELASTIC_PASSWORD")
+
+print("{}:{}@{}".format(user, password, hostname))
+
 # get environment variable HOSTNAME
 es = Elasticsearch([hostname], verify_certs=False , timeout=30, max_retries=10, retry_on_timeout=True, 
                    basic_auth=[user, password])
