@@ -8,7 +8,7 @@ app = FastAPI()
 # define your Elasticsearch connection here
 hostname = os.environ.get('ELASTIC_HOSTNAME')
 # get environment variable HOSTNAME
-es = Elasticsearch(['http://localhost:9200'], timeout=30, max_retries=10, retry_on_timeout=True, username=os.environ.get("ELASTIC_USERNAME"), password=os.environ.get("ELASTIC_PASSWORD"))
+es = Elasticsearch([hostname], timeout=30, max_retries=10, retry_on_timeout=True, username=os.environ.get("ELASTIC_USERNAME"), password=os.environ.get("ELASTIC_PASSWORD"))
 
 # define your JSON schema here
 class Message(BaseModel):
