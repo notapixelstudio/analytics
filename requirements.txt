@@ -1,0 +1,4 @@
+fastapi
+elasticsearch
+pydantic
+uvicorn
