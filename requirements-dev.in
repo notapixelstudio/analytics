@@ -1,7 +1,3 @@
-fastapi
-elasticsearch
-pydantic
-uvicorn
 black==22.12.*
 commitizen==2.39.*
 isort==5.12.*
