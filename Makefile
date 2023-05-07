@@ -3,6 +3,8 @@
 FILE=VERSION
 VERSION=`cat $(FILE)`
 COMMIT_MSG_HOOK = '\#!/bin/bash\nMSG_FILE=$$1\ncz check --allow-abort --commit-msg-file $$MSG_FILE'
+DOCKER_IMAGE_NAME=so_analytics
+USERNAME=salvob41 # Replace with your docker hub username
 
 install-pip-tools:
 	pip install -U pip
@@ -59,3 +61,6 @@ bump-major: fetch-tags setup-dev-env
 
 bump-patch: fetch-tags setup-dev-env
 	cz bump --increment PATCH
+
+docker-build:
+	docker build -t salvob41/$(DOCKER_IMAGE_NAME):$(VERSION) .

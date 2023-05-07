@@ -3,16 +3,16 @@ import json
 import os
 
 from elasticsearch import Elasticsearch
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 app = FastAPI()
 
 # define your Elasticsearch connection here
-hostname = os.environ.get("ELASTIC_HOSTNAME", "http://localhost:9200")
-user = os.environ.get("ELASTIC_USERNAME", "elastic")
-password = os.environ.get("ELASTIC_PASSWORD", "changeme")
+hostname = os.environ.get("ELASTIC_HOSTNAME", "http://notapixel.ddns.net:9200")
+user = os.environ.get("ELASTIC_USERNAME", "godot")
+password = os.environ.get("ELASTIC_PASSWORD", "cicciputte")
 token = os.environ.get("TOKEN", "Godotexport_v1.0.0")
 
 print("{}:{}@{}".format(user, password, hostname))
@@ -36,7 +36,9 @@ class Message(BaseModel, extra="allow"):
 
 # define your API endpoint here
 @app.post("/messages")
-async def create_event(message: Message, auth: str = Header(None, alias="Authorization")):
+async def create_event(
+    message: Message, request: Request, auth: str = Header(None, alias="Authorization")
+):
     """
     Indexes a message in Elasticsearch and saves the message data to a JSON file.
 
@@ -56,7 +58,8 @@ async def create_event(message: Message, auth: str = Header(None, alias="Authori
         >>> create_event(message)
         {"message": "Message has been indexed successfully."}
     """
-    print("request arrived")
+    print("request arrived {}".format(request.headers.get("user-agent")))
+    print(request.client.host)
     if not auth or not auth.startswith("Basic "):
         return JSONResponse(
             {"message": "Authorization header is missing or invalid"}, status_code=401
