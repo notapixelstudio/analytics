@@ -63,4 +63,10 @@ bump-patch: fetch-tags setup-dev-env
 	cz bump --increment PATCH
 
 docker-build:
-	docker build -t salvob41/$(DOCKER_IMAGE_NAME):$(VERSION) .
+	docker build -t $(USERNAME)/$(DOCKER_IMAGE_NAME):$(VERSION) .
+
+set-env-variables:
+	set -o allexport && source .env && set +o allexport
+
+local-run:
+	uvicorn app.main:app --reload

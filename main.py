@@ -1,6 +1,7 @@
 import base64
 import json
 import os
+from typing import Optional
 
 from elasticsearch import Elasticsearch
 from fastapi import FastAPI, Header, HTTPException, Request
@@ -10,7 +11,7 @@ from pydantic import BaseModel
 app = FastAPI()
 
 # define your Elasticsearch connection here
-hostname = os.environ.get("ELASTIC_HOSTNAME", "http://notapixel.ddns.net:9200")
+hostname = os.environ.get("ELASTIC_HOSTNAME", "https://notapixel.ddns.net:9200")
 user = os.environ.get("ELASTIC_USERNAME", "godot")
 password = os.environ.get("ELASTIC_PASSWORD", "cicciputte")
 token = os.environ.get("TOKEN", "Godotexport_v1.0.0")
@@ -32,6 +33,8 @@ es = Elasticsearch(
 class Message(BaseModel, extra="allow"):
     id: str
     message: str
+    ip: Optional[str] = None
+    user_agent: Optional[str] = None
 
 
 # define your API endpoint here
@@ -60,6 +63,8 @@ async def create_event(
     """
     print("request arrived {}".format(request.headers.get("user-agent")))
     print(request.client.host)
+    message.ip = request.client.host
+    message.user_agent = request.headers.get("user-agent")
     if not auth or not auth.startswith("Basic "):
         return JSONResponse(
             {"message": "Authorization header is missing or invalid"}, status_code=401
