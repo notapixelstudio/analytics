@@ -1,16 +1,19 @@
+import base64
 import json
 import os
 
 from elasticsearch import Elasticsearch
-from fastapi import FastAPI
+from fastapi import FastAPI, Header, HTTPException
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 app = FastAPI()
 
 # define your Elasticsearch connection here
-hostname = os.environ.get("ELASTIC_HOSTNAME")
-user = os.environ.get("ELASTIC_USERNAME")
-password = os.environ.get("ELASTIC_PASSWORD")
+hostname = os.environ.get("ELASTIC_HOSTNAME", "http://localhost:9200")
+user = os.environ.get("ELASTIC_USERNAME", "elastic")
+password = os.environ.get("ELASTIC_PASSWORD", "changeme")
+token = os.environ.get("TOKEN", "Godotexport_v1.0.0")
 
 print("{}:{}@{}".format(user, password, hostname))
 
@@ -33,7 +36,44 @@ class Message(BaseModel, extra="allow"):
 
 # define your API endpoint here
 @app.post("/messages")
-async def create_event(message: Message):
+async def create_event(message: Message, auth: str = Header(None, alias="Authorization")):
+    """
+    Indexes a message in Elasticsearch and saves the message data to a JSON file.
+
+    Args:
+        message (Message): A Pydantic model representing the message to index.
+            Must have fields 'id' and 'message'.
+
+    Returns:
+        dict: A JSON object with a message indicating whether the message
+            has been indexed successfully or if an error occurred.
+
+    Raises:
+        Exception: If an error occurs while indexing the message in Elasticsearch.
+
+    Example Usage:
+        >>> message = {"id": "godot_1", "message": "alakamza"}
+        >>> create_event(message)
+        {"message": "Message has been indexed successfully."}
+    """
+    print("request arrived")
+    if not auth or not auth.startswith("Basic "):
+        return JSONResponse(
+            {"message": "Authorization header is missing or invalid"}, status_code=401
+        )
+        raise ValueError("Authorization header is missing or invalid")
+
+    auth_token = auth.split(" ")[1]
+    decoded_auth = base64.b64decode(auth_token.encode("utf-8")).decode("utf-8")
+    print(decoded_auth)
+    if "Godotexport_v1.0.0" not in decoded_auth:
+        raise HTTPException(status_code=401, detail=f"Invalid authentication token {decoded_auth}")
+
+    # dump json into file with name message.id
+    with open("data/{}.json".format(message.id), "w") as f:
+        f.write(json.dumps(message.dict()))
+    print("message wrote to file with name {}.json".format(message.id))
+
     try:
         es.index(
             index="starship_olympics_analytics",  # id=message.id,
@@ -41,9 +81,10 @@ async def create_event(message: Message):
             op_type="create",
         )
     except Exception as e:
-        return {"message": "Error: {}".format(e)}
-    # dump json into file with name message.id
-    with open("{}.json".format(message.id), "w") as f:
-        f.write(json.dumps(message.dict()))
+        print("Error: {}".format(e))
+        return JSONResponse(
+            {"message": "Could not index message properly because Error: {}".format(e)},
+            status_code=502,
+        )
 
     return {"message": "Message has been indexed successfully."}

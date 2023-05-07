@@ -25,6 +25,9 @@ setup-dev-env: install-dev
 	echo $(COMMIT_MSG_HOOK) > .git/hooks/commit-msg
 	chmod +x .git/hooks/commit-msg
 
+setup-dev-env-autoupdate: setup-dev-env
+	pre-commit autoupdate
+
 clean:
 	find . -type d -name __pycache__ -prune -exec rm -rf {} \;
 	find . -type d -name .hypothesis -prune -exec rm -rf {} \;
@@ -37,9 +40,6 @@ ndef = $(if $(value $(1)),,$(error $(1) not set, provide $(1), e.g. make $(1)=<v
 echo-version:
 	$(call ndef,VERSION)
 	@echo $(VERSION)
-
-tree:
-	tree app
 
 fetch-tags:
 	git fetch --tags
