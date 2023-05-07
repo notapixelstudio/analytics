@@ -32,7 +32,7 @@ es = Elasticsearch(
 # define your JSON schema here
 class Message(BaseModel, extra="allow"):
     id: str
-    message: str
+    event_name: str
     ip: Optional[str] = None
     user_agent: Optional[str] = None
 
