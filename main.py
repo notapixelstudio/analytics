@@ -1,22 +1,27 @@
 import base64
 import json
+import logging
 import os
-from typing import Optional
 
 from elasticsearch import Elasticsearch
 from fastapi import FastAPI, Header, HTTPException, Request
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-app = FastAPI()
+app = FastAPI(version="0.4.0", title="SO Analytics", description="SO Analytics API")
 
 # define your Elasticsearch connection here
-hostname = os.environ.get("ELASTIC_HOSTNAME", "https://notapixel.ddns.net:9200")
-user = os.environ.get("ELASTIC_USERNAME", "godot")
-password = os.environ.get("ELASTIC_PASSWORD", "cicciputte")
-token = os.environ.get("TOKEN", "Godotexport_v1.0.0")
+hostname = os.environ.get("ELASTIC_HOSTNAME", "https://localhost:9200")
+user = os.environ.get("ELASTIC_USERNAME", "elastic")
+password = os.environ.get("ELASTIC_PASSWORD", "changeme")
+token = os.environ.get("TOKEN", "secret_token")
 
-print("{}:{}@{}".format(user, password, hostname))
+# Initialize logger
+logger = logging.getLogger("api_logger")
+logger.setLevel(logging.INFO)
+formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(formatter)
+logger.addHandler(stream_handler)
 
 # get environment variable HOSTNAME
 es = Elasticsearch(
@@ -29,15 +34,11 @@ es = Elasticsearch(
 )
 
 
-# define your JSON schema here
 class Message(BaseModel, extra="allow"):
     id: str
-    event_name: str
-    ip: Optional[str] = None
-    user_agent: Optional[str] = None
+    version: str
 
 
-# define your API endpoint here
 @app.post("/messages")
 async def create_event(
     message: Message, request: Request, auth: str = Header(None, alias="Authorization")
@@ -47,7 +48,7 @@ async def create_event(
 
     Args:
         message (Message): A Pydantic model representing the message to index.
-            Must have fields 'id' and 'message'.
+            Must have fields 'id' and 'message' and 'version'.
 
     Returns:
         dict: A JSON object with a message indicating whether the message
@@ -55,44 +56,50 @@ async def create_event(
 
     Raises:
         Exception: If an error occurs while indexing the message in Elasticsearch.
+        HTTPException: If an authentication error occurs.
 
     Example Usage:
         >>> message = {"id": "godot_1", "message": "alakamza"}
         >>> create_event(message)
         {"message": "Message has been indexed successfully."}
     """
-    print("request arrived {}".format(request.headers.get("user-agent")))
-    print(request.client.host)
+    logger.info(
+        "Request received from client with user-agent %s", request.headers.get("user-agent")
+    )
+    logger.info("Request received from IP address %s", request.client.host)
+
     message.ip = request.client.host
     message.user_agent = request.headers.get("user-agent")
+    message.api_version = app.version
+
     if not auth or not auth.startswith("Basic "):
-        return JSONResponse(
-            {"message": "Authorization header is missing or invalid"}, status_code=401
-        )
-        raise ValueError("Authorization header is missing or invalid")
+        raise HTTPException(status_code=401, detail="Authorization header is missing or invalid")
 
     auth_token = auth.split(" ")[1]
     decoded_auth = base64.b64decode(auth_token.encode("utf-8")).decode("utf-8")
-    print(decoded_auth)
+    logger.info("Decoded authorization token: %s", decoded_auth)
+
     if "Godotexport_v1.0.0" not in decoded_auth:
         raise HTTPException(status_code=401, detail=f"Invalid authentication token {decoded_auth}")
 
-    # dump json into file with name message.id
-    with open("data/{}.json".format(message.id), "w") as f:
+    # Dump json into file with name message.id
+    with open(f"data/{message.id}.json", "w") as f:
         f.write(json.dumps(message.dict()))
-    print("message wrote to file with name {}.json".format(message.id))
+
+    logger.info("Message data saved to file with name %s.json", message.id)
 
     try:
         es.index(
-            index="starship_olympics_analytics",  # id=message.id,
+            index="starship_olympics_analytics",
             document=message.dict(),
             op_type="create",
         )
+        logger.info("Message indexed successfully in Elasticsearch")
     except Exception as e:
-        print("Error: {}".format(e))
-        return JSONResponse(
-            {"message": "Could not index message properly because Error: {}".format(e)},
+        logger.error("Could not index message properly because of %s", str(e))
+        raise HTTPException(
             status_code=502,
+            detail=f"Could not index message properly because of {str(e)}",
         )
 
-    return {"message": "Message has been indexed successfully."}
+    return {"message": f"Message has been indexed successfully. API version: {app.version}"}

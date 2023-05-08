@@ -31,14 +31,14 @@ filterwarnings = [
 
 
 [tool.commitizen]
+version_type = "semver"
 name = "cz_conventional_commits"
-version = "1.5.0"
+version = "0.3.0"
 tag_format = "v$version"
 version_files = [
-    "app/__init__.py",
-    "app/main.py:version",
+    "main.py:version",
     "pyproject.toml:version",
-    "openapi.json:version",
+    # "openapi.json:version",
     "VERSION"
 ]
 bump_message = "bump: version $current_version → $new_version"
