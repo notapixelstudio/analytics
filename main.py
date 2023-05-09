@@ -32,11 +32,13 @@ es = Elasticsearch(
     retry_on_timeout=True,
     basic_auth=[user, password],
 )
+logger.info("Connected to Elasticsearch at %s", hostname)
 
 
 class Message(BaseModel, extra="allow"):
     id: str
     version: str
+    event_name: str
 
 
 @app.post("/messages")
@@ -94,7 +96,7 @@ async def create_event(
             document=message.dict(),
             op_type="create",
         )
-        logger.info("Message indexed successfully in Elasticsearch")
+        logger.info(f"Message {message.event_name} has been indexed successfully.")
     except Exception as e:
         logger.error("Could not index message properly because of %s", str(e))
         raise HTTPException(
@@ -102,4 +104,9 @@ async def create_event(
             detail=f"Could not index message properly because of {str(e)}",
         )
 
-    return {"message": f"Message has been indexed successfully. API version: {app.version}"}
+    return {
+        "message": (
+            f"Message {message.event_name} has been indexed successfully. API version:"
+            f" {app.version}"
+        )
+    }
