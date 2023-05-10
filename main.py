@@ -95,6 +95,7 @@ async def create_event(
             index="starship_olympics_analytics",
             document=message.dict(),
             op_type="create",
+            pipeline="geoip",
         )
         logger.info(f"Message {message.event_name} has been indexed successfully.")
     except Exception as e:
