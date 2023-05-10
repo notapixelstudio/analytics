@@ -1,3 +1,9 @@
+## v0.6.0 (2023-05-10)
+
+### Feat
+
+- **pipeline**: added pipeline geoip
+
 ## v0.5.0 (2023-05-10)
 
 ### Fix
