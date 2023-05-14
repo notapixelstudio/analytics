@@ -2,6 +2,8 @@ import base64
 import json
 import logging
 import os
+from ipaddress import IPv4Address, ip_address
+from typing import Optional
 
 from elasticsearch import Elasticsearch
 from fastapi import FastAPI, Header, HTTPException, Request
@@ -23,6 +25,24 @@ stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 
+
+def validate_ip_address(ip: str) -> Optional[str]:
+    try:
+        return "IPv4" if type(ip_address(ip)) is IPv4Address else "IPv6"
+    except ValueError:
+        return None
+
+
+def anonymize_ip(ip: str) -> str:
+    ipv4_mask = int(ip_address("255.255.255.0"))
+    ipv6_mask = int(ip_address("ffff:ffff:ffff:ffff::"))
+    if validate_ip_address(ip) == "IPv4":
+        return str(ip_address(int(ip_address(ip)) & ipv4_mask))
+    if validate_ip_address(ip) == "IPv6":
+        return str(ip_address(int(ip_address(ip)) & ipv6_mask))
+    return None
+
+
 # get environment variable HOSTNAME
 es = Elasticsearch(
     [hostname],
@@ -35,7 +55,7 @@ es = Elasticsearch(
 logger.info("Connected to Elasticsearch at %s", hostname)
 
 
-class Message(BaseModel, extra="allow"):
+class Event(BaseModel, extra="allow"):
     id: str
     version: str
     event_name: str
@@ -43,13 +63,13 @@ class Message(BaseModel, extra="allow"):
 
 @app.post("/messages")
 async def create_event(
-    message: Message, request: Request, auth: str = Header(None, alias="Authorization")
+    message: Event, request: Request, auth: str = Header(None, alias="Authorization")
 ):
     """
     Indexes a message in Elasticsearch and saves the message data to a JSON file.
 
     Args:
-        message (Message): A Pydantic model representing the message to index.
+        message (Event): A Pydantic model representing the message to index.
             Must have fields 'id' and 'message' and 'version'.
 
     Returns:
@@ -70,7 +90,7 @@ async def create_event(
     )
     logger.info("Request received from IP address %s", request.client.host)
 
-    message.ip = request.client.host
+    message.ip = anonymize_ip(request.client.host)
     message.user_agent = request.headers.get("user-agent")
     message.api_version = app.version
 
@@ -88,7 +108,7 @@ async def create_event(
     with open(f"data/{message.id}.json", "w") as f:
         f.write(json.dumps(message.dict()))
 
-    logger.info("Message data saved to file with name %s.json", message.id)
+    logger.info("Event data saved to file with name %s.json", message.id)
 
     try:
         es.index(
@@ -97,7 +117,7 @@ async def create_event(
             op_type="create",
             pipeline="geoip",
         )
-        logger.info(f"Message {message.event_name} has been indexed successfully.")
+        logger.info(f"Event {message.event_name} has been indexed successfully.")
     except Exception as e:
         logger.error("Could not index message properly because of %s", str(e))
         raise HTTPException(
@@ -107,7 +127,6 @@ async def create_event(
 
     return {
         "message": (
-            f"Message {message.event_name} has been indexed successfully. API version:"
-            f" {app.version}"
+            f"Event {message.event_name} has been indexed successfully. API version: {app.version}"
         )
     }
