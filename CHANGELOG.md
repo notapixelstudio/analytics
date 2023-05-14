@@ -1,3 +1,9 @@
+## v0.7.0 (2023-05-14)
+
+### Feat
+
+- anonymize IPs (both ipv4 and ipv6)
+
 ## v0.6.0 (2023-05-10)
 
 ### Feat
