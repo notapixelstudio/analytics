@@ -61,6 +61,13 @@ class Event(BaseModel, extra="allow"):
     event_name: str
 
 
+@app.post("/bulk")
+async def bulk(
+    messages: list[Event], request: Request, auth: str = Header(None, alias="Authorization")
+):
+    pass
+
+
 @app.post("/messages")
 async def create_event(
     message: Event, request: Request, auth: str = Header(None, alias="Authorization")
@@ -80,16 +87,14 @@ async def create_event(
         Exception: If an error occurs while indexing the message in Elasticsearch.
         HTTPException: If an authentication error occurs.
 
-    Example Usage:
-        >>> message = {"id": "godot_1", "message": "alakamza"}
-        >>> create_event(message)
-        {"message": "Message has been indexed successfully."}
     """
     logger.info(
         "Request received from client with user-agent %s", request.headers.get("user-agent")
     )
     logger.info("Request received from IP address %s", request.client.host)
 
+    # authorize_request(request, auth)
+    # enrich_event(message, request)
     message.ip = anonymize_ip(request.client.host)
     message.user_agent = request.headers.get("user-agent")
     message.api_version = app.version

@@ -1,0 +1,48 @@
+# this document contains the commands for elasticsearch that might be useful
+
+# Create the index with mapping
+PUT starship_olympics_analytics
+{
+  "mappings": {
+    "_source": {
+      "mode": "synthetic"
+    },
+    "properties": {
+      "timestamp": {
+        "type": "date"
+      },
+      "geoip": {
+        "properties": {
+          "location": {
+            "type": "geo_point"
+          }
+        }
+      }
+    }
+  }
+}
+
+# Create the pipeline for geoip enrichment. That will enrich the ip field with geoip info
+PUT _ingest/pipeline/geoip
+{
+  "description" : "Add geoip info",
+  "processors" : [
+    {
+      "geoip" : {
+        "field" : "ip"
+      }
+    }
+  ]
+}
+
+# If you want to copy data from an index to another
+POST _reindex
+{
+  "source": {
+    "index": "starship_olympics_analytics1"
+  },
+  "dest": {
+    "index": "starship_olympics_analytics",
+    "pipeline": "geoip"
+  }
+}
