@@ -52,7 +52,7 @@ es = Elasticsearch(
     retry_on_timeout=True,
     basic_auth=[user, password],
 )
-logger.info("Connected to Elasticsearch at %s", hostname)
+logger.info("Connected to Elasticsearch with hostname %s", hostname)
 
 
 class Event(BaseModel, extra="allow"):
