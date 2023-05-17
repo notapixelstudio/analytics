@@ -9,7 +9,7 @@ from elasticsearch import Elasticsearch
 from fastapi import FastAPI, Header, HTTPException, Request
 from pydantic import BaseModel
 
-app = FastAPI(version="0.7.0", title="SO Analytics", description="SO Analytics API")
+app = FastAPI(version="0.7.1", title="SO Analytics", description="SO Analytics API")
 
 # define your Elasticsearch connection here
 hostname = os.environ.get("ELASTIC_HOSTNAME", "https://localhost:9200")
